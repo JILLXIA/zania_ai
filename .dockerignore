@@ -1,0 +1,7 @@
+*
+!app/
+!app/**
+!scripts/
+!scripts/prepare_model.py
+!pyproject.toml
+!requirements.lock

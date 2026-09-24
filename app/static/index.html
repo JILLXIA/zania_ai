@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Document QA</title><link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">DOCUMENT INTELLIGENCE</span><h1>Ask your document.</h1>
+      <p>Answers grounded in your source, with citations you can check.</p></header>
+    <form id="upload-form">
+      <div class="file-grid">
+        <label><span class="step">01</span><strong>Questions</strong>
+          <span>A JSON array of question strings.</span>
+          <input id="questions" name="questions" type="file" accept=".json,application/json" required>
+        </label>
+        <label><span class="step">02</span><strong>Document</strong>
+          <span>One PDF or JSON knowledge base.</span>
+          <input id="document" name="document" type="file" accept=".pdf,.json,application/pdf,application/json" required>
+        </label>
+      </div>
+      <p class="hint">PDF text and images are analyzed. Defaults: 20 MiB, 30 questions, 10 visual pages.</p>
+      <details><summary>Questions file example</summary><pre>["Which cloud providers do you rely on?",
+ "Is personal information disclosed to third parties?"]</pre></details>
+      <div class="actions"><button id="analyze" type="submit">Analyze document <span aria-hidden="true">↗</span></button>
+        <span id="progress" role="status" aria-live="polite"></span></div>
+    </form>
+    <p id="error" role="alert" hidden></p>
+    <section id="output" hidden aria-label="Answers">
+      <div class="result-heading"><h2>Answers</h2><button id="download" type="button" class="secondary">Download JSON</button></div>
+      <div id="warnings"></div><div id="results"></div>
+    </section>
+    <footer>Each request uses only the document you upload. Image citations are model interpretations.</footer>
+  </main>
+</body>
+</html>

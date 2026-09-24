@@ -1,0 +1,16 @@
+[
+  {
+    "id": "hosting",
+    "question": "Where is the service hosted?",
+    "answer": "The service is hosted on Google Cloud Platform (GCP).",
+    "comments": "This is a synthetic example knowledge base, not the Nave report.",
+    "confidence": "high"
+  },
+  {
+    "id": "incidents",
+    "question": "How are security incidents communicated?",
+    "answer": "Affected customers are informed without undue delay.",
+    "comments": "The numeric notification SLA is not specified.",
+    "confidence": "high"
+  }
+]
