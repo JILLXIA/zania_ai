@@ -4,6 +4,10 @@ One FastAPI service answers a JSON list of questions from **one uploaded PDF or 
 
 No agent loop, database, queue, frontend build system, or persistent document store.
 
+Optional [LangSmith tracing](docs/langsmith.md) shows parsing, retrieval, model
+calls, retries, and application events. It is disabled by default; input/output
+bodies stay hidden unless explicitly enabled.
+
 ## Run locally
 
 Use Python 3.12 (3.14 is not supported by this dependency set).
@@ -104,6 +108,7 @@ Files are deliberately small and concrete:
 | `app/provider.py` | Two structured `gpt-4o-mini` calls: vision and answers |
 | `app/service.py` | Orchestration, citations, partial failures |
 | `app/models.py`, `config.py`, `logging.py` | Schemas, settings, JSON logs |
+| `app/tracing.py` | Optional LangSmith client and trace steps |
 | `app/static/` | HTML/CSS/JavaScript, no build step |
 
 ## Limits and operational behavior
@@ -128,7 +133,7 @@ Configure settings with `ZANIA_` environment variables; `.env.example` lists com
 
 CPU work runs outside the event loop, with one embedding job at a time and two ONNX inference threads. Cancelled embedding work retains its slot until the thread exits; the processing deadline is therefore not a hard OS-level wall-clock kill for that stage. PDF/JSON workers are killed and reaped on cancellation. Linux workers have a 512 MiB address-space limit; macOS development relies on the other bounds. Upload limits count actual received bytes, not just `Content-Length`.
 
-Temporary documents/rasters are removed after workers stop. Uploads, answers and indexes are not persisted. JSON logs contain request IDs, stage timing, counts, retries and returned model token usage, not document text or credentials. External tracing and ONNX telemetry are disabled. Use one Uvicorn worker to retain the documented process-wide limits.
+Temporary documents/rasters are removed after workers stop. Uploads, answers and indexes are not persisted locally. JSON console logs contain request IDs, stage timing, counts, retries and returned model token usage, not document text or credentials. LangSmith tracing is opt-in and stores traces externally when enabled; capturing prompt/response bodies requires a separate explicit choice. See the [setup and privacy guide](docs/langsmith.md). ONNX telemetry remains disabled. Use one Uvicorn worker to retain the documented process-wide limits.
 
 Vision can be expensive relative to text; the per-request budget is **not** an account-wide spending cap. Set a provider project budget separately. Over-limit scanned PDFs are rejected, not silently truncated.
 

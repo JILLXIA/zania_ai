@@ -2,9 +2,12 @@ import asyncio
 from functools import partial
 from pathlib import Path
 
+from langsmith import tracing_context
+
 from app.config import Settings
 from app.ingestion import parse_document, vision_tokens
 from app.logging import event
+from app.logging import request_id as log_request_id
 from app.models import (
     AnswerOutput,
     AppError,
@@ -16,6 +19,7 @@ from app.models import (
     normalize,
 )
 from app.retrieval import retrieve_all
+from app.tracing import trace_step
 
 
 def grounded_result(question, output: AnswerOutput, chunks) -> Result:
@@ -81,7 +85,45 @@ class QAService:
                 raise
 
     async def run(self, questions: list[str], path: Path, kind: str, request_id: str):
-        document = await self.parser(path, kind, self.settings)
+        client = getattr(self.provider, "trace_client", None)
+        token = log_request_id.set(request_id)
+        try:
+            with tracing_context(
+                enabled=client is not None,
+                client=client,
+                project_name=self.settings.langsmith_project,
+                parent=False,
+                metadata={"request_id": request_id, "document_type": kind},
+                tags=["document-qa", kind],
+            ):
+                with trace_step(
+                    "document_qa",
+                    inputs={"questions": questions},
+                    metadata={"question_count": len(questions)},
+                ) as run:
+                    if run is not None:
+                        event("trace_started", trace_id=str(run.id))
+                    response, status = await self._run(questions, path, kind, request_id)
+                    if run is not None:
+                        run.end(
+                            outputs=response.model_dump(exclude_none=True),
+                            metadata={
+                                "http_status": status,
+                                "result_statuses": [r.status for r in response.results],
+                            },
+                            error="All questions failed." if status >= 400 else None,
+                        )
+                    return response, status
+        finally:
+            log_request_id.reset(token)
+
+    async def _run(self, questions: list[str], path: Path, kind: str, request_id: str):
+        with trace_step("parse_document", inputs={"document_type": kind}) as run:
+            document = await self.parser(path, kind, self.settings)
+            if run is not None:
+                run.add_metadata(
+                    {"source_count": len(document.sources), "visual_count": len(document.visuals)}
+                )
         warnings = []
         if document.visuals:
             unique = {}
@@ -141,13 +183,34 @@ class QAService:
         if sum(len(s.text) for s in document.sources) > self.settings.max_text_chars:
             raise AppError(413, "document_too_large", "Combined evidence exceeds the text limit.")
         unique_questions = list(dict.fromkeys(q.strip() for q in questions))
-        contexts = await self.run_cpu(
-            retrieve_all,
-            document.sources,
-            unique_questions,
-            self.embeddings,
-            self.settings,
-        )
+        with trace_step(
+            "retrieve_evidence", run_type="retriever", inputs={"questions": unique_questions}
+        ) as run:
+            contexts = await self.run_cpu(
+                retrieve_all,
+                document.sources,
+                unique_questions,
+                self.embeddings,
+                self.settings,
+            )
+            if run is not None:
+                run.end(
+                    outputs={
+                        "evidence": [
+                            [
+                                {
+                                    "chunk_id": c.id,
+                                    "text": c.text,
+                                    "page": c.source.page,
+                                    "source_path": c.source.source_path,
+                                    "source_type": c.source.source_type,
+                                }
+                                for c in context
+                            ]
+                            for context in contexts
+                        ]
+                    }
+                )
         event(
             "retrieval",
             sources=len(document.sources),

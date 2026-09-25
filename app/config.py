@@ -6,6 +6,17 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ZANIA_", env_file=".env", extra="ignore")
 
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
+    langsmith_tracing: bool = Field(default=False, validation_alias="LANGSMITH_TRACING")
+    langsmith_api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="LANGSMITH_API_KEY"
+    )
+    langsmith_project: str = Field(default="zania-demo", validation_alias="LANGSMITH_PROJECT")
+    langsmith_endpoint: str = Field(
+        default="https://api.smith.langchain.com", validation_alias="LANGSMITH_ENDPOINT"
+    )
+    langsmith_workspace_id: str = Field(default="", validation_alias="LANGSMITH_WORKSPACE_ID")
+    langsmith_hide_inputs: bool = Field(default=True, validation_alias="LANGSMITH_HIDE_INPUTS")
+    langsmith_hide_outputs: bool = Field(default=True, validation_alias="LANGSMITH_HIDE_OUTPUTS")
     model_cache: str = ".models"
     max_request_bytes: int = Field(default=21 * 1024 * 1024, gt=0)
     max_document_bytes: int = Field(default=20 * 1024 * 1024, gt=0)

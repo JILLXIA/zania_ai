@@ -215,7 +215,10 @@ def vision_tokens(width: int, height: int) -> int:
 
 async def parse_document(path: Path, kind: str, settings: Settings) -> ParsedDocument:
     output = path.parent / "parsed.json"
-    safe_settings = settings.model_dump(exclude={"openai_api_key"})
+    safe_settings = settings.model_dump(
+        exclude={"openai_api_key"}
+        | {k for k in Settings.model_fields if k.startswith("langsmith_")}
+    )
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
@@ -226,7 +229,11 @@ async def parse_document(path: Path, kind: str, settings: Settings) -> ParsedDoc
         json.dumps(safe_settings),
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.DEVNULL,
-        env={k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"},
+        env={
+            k: v
+            for k, v in os.environ.items()
+            if k != "OPENAI_API_KEY" and not k.startswith(("LANGSMITH_", "LANGCHAIN_"))
+        },
     )
     try:
         async with asyncio.timeout(settings.parsing_timeout + settings.rendering_timeout):

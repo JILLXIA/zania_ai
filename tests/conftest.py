@@ -112,7 +112,9 @@ def uploads(questions=None, document=None, *, kind="json"):
 
 @pytest.fixture
 def settings():
-    return Settings(_env_file=None, OPENAI_API_KEY="")
+    return Settings(
+        _env_file=None, OPENAI_API_KEY="", LANGSMITH_TRACING=False, LANGSMITH_API_KEY=""
+    )
 
 
 @pytest.fixture

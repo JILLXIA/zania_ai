@@ -1,14 +1,15 @@
 # Implementation verification
 
-Checked on macOS / Python 3.12.14, 2026-09-24. These notes separate local evidence from checks that still require external services.
+Checked on macOS / Python 3.12.14, most recently 2026-09-25. These notes separate local evidence from checks that still require external services.
 
 ## Completed
 
-- **112 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite. The original suite had 76 tests; the expanded example catalog adds 36 checks.
+- **126 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite. The original suite had 76 tests; the expanded example catalog adds 36 checks and optional LangSmith tracing adds 14.
 - Ruff lint and formatting checks, Python compilation, JavaScript syntax check, and `pip check` pass.
 - Started the actual Uvicorn server on loopback and verified `/health` over HTTP returned `{"status":"ok"}`. No API key was configured for this smoke check.
 - Tests exercise real JSON/PDF parsing, real PDFium image-region rendering, real FAISS indexing/MMR, multipart validation, response schemas, and service orchestration. Deterministic embeddings and fake answers are test doubles, not claims of answer quality.
 - The real LangChain/OpenAI SDK is exercised against an in-memory HTTP transport: structured schemas, the fixed `gpt-4o-mini` model, image payloads, refusal/invalid output, retry bounds, token retry budget, and shared call concurrency.
+- The real LangSmith SDK is exercised against a recording HTTP session: explicit client/project routing, request/child trace relationships, vector-index events, input/output masking (including vision payloads), visible retries, concurrent-request isolation, nonfatal tracing authentication failures, and parser-worker credential exclusion. A regression guard rejects accidental use of a default tracing client. These tests do not validate a real LangSmith account or dashboard.
 - Additional checks cover question order/deduplication, partial-answer text, unknown/fabricated citations, PDF versus JSON isolation, visual failure handling, byte/field limits, parser/vision deadlines, disconnect cleanup, CPU cancellation accounting, and content-free JSON logs.
 - Public BGE ONNX artifacts were downloaded at revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`. Actual local inference produces 384-dimensional vectors.
 - Converted the supplied CSV locally and verified 19 records. The conversion utility preserves all named field values and refuses overwrites. The generated private JSON stays under the ignored requirements directory.
@@ -33,6 +34,7 @@ The converted JSON document was also queried separately using real local embeddi
 
 ## Not yet verified
 
+- **Live LangSmith delivery:** no live trace uploads were completed. Account authentication, workspace/region configuration, and dashboard rendering still require the user's credentials and an authorized live request. See [setup and privacy instructions](langsmith.md).
 - **Live OpenAI generation/vision:** no paid API calls were made. Actual diagram-reading accuracy, answer entailment, prompt-injection resistance, provider latency/rate limits, and total usage remain to be reviewed with `scripts/evaluate.py --live` after configuring a key and budget. A passing mocked test does not establish these properties.
 - **Docker build and Linux runtime:** Docker CLI is present, but the local Docker daemon is not running. The Dockerfile and version lock are supplied; image build, Linux dependency compatibility, worker memory limits, non-root rendering and container health still need a real container smoke test.
 - **Browser visual/interaction QA:** the Browser tool reported no connected browser. HTTP/static-route and JavaScript syntax checks pass; real file-selection, card rendering, responsive layout and download interactions still need browser review.

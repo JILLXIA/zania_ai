@@ -316,7 +316,9 @@ Enforce the aggregate byte limit at the ASGI receive boundary, before multipart 
 
 ### Logging, credentials, and budget
 
-Emit JSON logs with request ID, stage, request timing/received bytes/status, source/question counts, visual candidate/call counts, model ID, returned token usage, and retry/error codes. Distinguish visual-ingestion usage from answer-generation usage. Do not log document content, image bytes/base64, question/answer text, credentials, or raw provider responses. External tracing is disabled.
+Emit JSON console logs with request ID, stage, request timing/received bytes/status, source/question counts, visual candidate/call counts, model ID, returned token usage, and retry/error codes. Distinguish visual-ingestion usage from answer-generation usage. Do not put document content, image bytes/base64, question/answer text, credentials, or raw provider responses in those console logs. External tracing is disabled by default.
+
+Follow-up addition: optional LangSmith tracing records a request root, parsing/retrieval steps, model calls, and structured application events. Input/output bodies are hidden by default; explicitly enabling their capture sends selected document content to LangSmith for external storage. Error text and metadata are not generally redacted. Trace uploads are best effort and must not change QA results. See [LangSmith setup and privacy](langsmith.md). Parser subprocesses receive neither provider nor tracing credentials.
 
 Load `OPENAI_API_KEY` from the environment. A missing key makes readiness fail and QA return a clear configuration error; it must not prevent offline tests from creating an app with injected test doubles. Commit only a placeholder `.env.example`.
 

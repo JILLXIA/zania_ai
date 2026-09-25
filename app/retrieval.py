@@ -9,6 +9,7 @@ from langchain_core.vectorstores.utils import maximal_marginal_relevance
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import EMBEDDING_MODEL, Settings
+from app.logging import event
 from app.models import AppError, Source
 
 
@@ -97,6 +98,7 @@ def retrieve_all(sources: list[Source], questions: list[str], embeddings, settin
     faiss.normalize_L2(queries)
     index = faiss.IndexFlatIP(vectors.shape[1])
     index.add(vectors)
+    event("vector_index", index_type="IndexFlatIP", vectors=index.ntotal, dimensions=index.d)
     _, neighbors = index.search(queries, min(12, len(chunks)))
     result = []
     for query, ids in zip(queries, neighbors, strict=True):

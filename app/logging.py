@@ -1,6 +1,9 @@
 import json
 import logging
 from contextvars import ContextVar
+from datetime import UTC, datetime
+
+from langsmith import get_current_run_tree
 
 request_id: ContextVar[str] = ContextVar("request_id", default="-")
 logger = logging.getLogger("zania")
@@ -20,3 +23,6 @@ def configure_logging() -> None:
 
 def event(stage: str, **fields: object) -> None:
     logger.info(json.dumps({"request_id": request_id.get(), "stage": stage, **fields}))
+    run = get_current_run_tree()
+    if run is not None:
+        run.add_event({"name": stage, "time": datetime.now(UTC).isoformat(), "kwargs": fields})
