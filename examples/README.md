@@ -157,7 +157,7 @@ No special question text in the real API triggers a timeout or outage. These cas
 | --- | --- | --- |
 | All answer calls unavailable | `tests/test_examples.py::test_operational_failure_examples[unavailable-503-provider_unavailable]` | HTTP 503; `all_questions_failed`; each result has `status: error` / `provider_unavailable` |
 | All answer calls time out | Same parametrized test, `timeout` case | HTTP 504; per-question `provider_timeout`, never `not_found` |
-| Model fabricates a quotation | Same parametrized test, `bad_quote` case | HTTP 502; per-question `invalid_citation` |
+| Provider double references unavailable evidence | Same parametrized test, `bad_evidence_id` case | HTTP 502; per-question `invalid_citation`; real structured output also constrains IDs |
 | Some answers succeed, one fails | `tests/test_api.py::test_mixed_and_all_upstream_failures` | HTTP 200 with both usable answers and explicit per-question errors |
 | Processing deadline after one completed answer | `tests/test_api.py::test_deadline_preserves_completed_answers` | Keep the completed answer; unfinished question becomes an error |
 | Model refuses or returns invalid schema | `tests/test_provider.py::test_invalid_or_refused_output_is_not_not_found` | `invalid_model_output`, not missing document evidence |

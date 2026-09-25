@@ -3,23 +3,24 @@ import threading
 
 import pytest
 
-from app.models import AnswerOutput, AppError, Evidence, ParsedDocument, Source, Visual
+from app.evidence import build_passages
+from app.models import AnswerOutput, AppError, ParsedDocument, Source, Visual
 from app.retrieval import Chunk, build_chunks, retrieve_all
 from app.service import grounded_result
 from tests.conftest import FakeEmbeddings
 
 
-@pytest.mark.parametrize("chunk_id,quote", [("missing", "GCP"), ("c0", "AWS"), ("c0", " ")])
-def test_fabricated_citations_are_errors(chunk_id, quote):
+@pytest.mark.parametrize("evidence_id", ["missing", "c0", " "])
+def test_unavailable_citation_ids_are_errors(evidence_id):
     chunk = Chunk("c0", "GCP", Source(text="GCP", page=12))
     output = AnswerOutput(
         status="answered",
         answer="Claim",
         missing_details=[],
-        evidence=[Evidence(chunk_id=chunk_id, excerpt=quote)],
+        evidence_ids=[evidence_id],
     )
     with pytest.raises(AppError) as error:
-        grounded_result("Question?", output, [chunk])
+        grounded_result("Question?", output, build_passages([chunk]))
     assert error.value.code == "invalid_citation"
 
 
@@ -29,26 +30,30 @@ def test_image_citation_modality_and_location_are_server_owned():
         status="answered",
         answer="Redis",
         missing_details=[],
-        evidence=[Evidence(chunk_id="c0", excerpt="Redis")],
+        evidence_ids=["c0:p0"],
     )
-    result = grounded_result("Components?", output, [chunk])
+    result = grounded_result("Components?", output, build_passages([chunk]))
     assert result.citations[0].source_type == "image"
     assert result.citations[0].page == 15
 
 
 @pytest.mark.parametrize(
-    "status,missing,evidence",
+    "status,missing,evidence_ids",
     [
         ("answered", [], []),
         ("partial", [], []),
-        ("answered", ["region"], [{"chunk_id": "c0", "excerpt": "GCP"}]),
-        ("not_found", [], [{"chunk_id": "c0", "excerpt": "GCP"}]),
+        ("answered", ["region"], ["c0:p0"]),
+        ("not_found", [], ["c0:p0"]),
     ],
 )
-def test_inconsistent_answer_fields(status, missing, evidence):
-    output = AnswerOutput(status=status, answer="Claim", missing_details=missing, evidence=evidence)
+def test_inconsistent_answer_fields(status, missing, evidence_ids):
+    output = AnswerOutput(
+        status=status, answer="Claim", missing_details=missing, evidence_ids=evidence_ids
+    )
     with pytest.raises(AppError):
-        grounded_result("Question?", output, [Chunk("c0", "GCP", Source(text="GCP", page=1))])
+        grounded_result(
+            "Question?", output, build_passages([Chunk("c0", "GCP", Source(text="GCP", page=1))])
+        )
 
 
 def test_real_faiss_retrieval_and_bounded_chunks(settings):

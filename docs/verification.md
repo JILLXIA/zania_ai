@@ -4,12 +4,12 @@ Checked on macOS / Python 3.12.14, most recently 2026-09-25. These notes separat
 
 ## Completed
 
-- **150 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite. The original suite had 76 tests; the expanded example catalog adds 36 checks, optional LangSmith tracing adds 14, JSON citation regression coverage adds 9, and hybrid retrieval adds 15.
+- **172 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite. The original suite had 76 tests; the expanded example catalog adds 36 checks, optional LangSmith tracing adds 14, hybrid retrieval adds 15, and server-owned citations/passages now have 31 checks (replacing the earlier 9 quote-copying regression cases).
 - Ruff lint and formatting checks, Python compilation, JavaScript syntax check, and `pip check` pass.
 - Started the actual Uvicorn server on loopback and verified `/health` over HTTP returned `{"status":"ok"}`. No API key was configured for this smoke check.
 - Tests exercise real JSON/PDF parsing, real PDFium image-region rendering, real FAISS indexing/MMR, BM25/RRF, multipart validation, response schemas, and service orchestration. Deterministic embeddings and fake answers are test doubles, not claims of answer quality.
 - The real LangChain/OpenAI SDK is exercised against an in-memory HTTP transport: structured schemas, the fixed `gpt-4o-mini` model, image payloads, refusal/invalid output, retry bounds, token retry budget, and shared call concurrency.
-- A user-supplied live trace exposed a JSON citation rewritten by joining the `answer` and `comments` fields. The prompt now explicitly requires continuous source spans, unchanged capitalization/punctuation, and separate citations for separate field values, with valid/invalid examples. Regression tests accept literal quotes and reject the reported merged quote; a mocked SDK test verifies that the new rules are actually sent. The exact-match validator is unchanged. These checks do not prove live model compliance with the revised prompt; restart and rerun the sanctions question to verify it.
+- User-supplied traces exposed merged JSON-field quotations, a correct PDF quote paired with the wrong chunk ID, and a TLS quote rewritten from “User entities” to “Users.” An initial prompt-only fix was insufficient. The answer model now selects allowed passage IDs, and the server owns quotation text and source metadata; see the dedicated checks below. This prevents quote-copying mismatches but does not guarantee that the model selects relevant evidence or makes supported claims.
 - The real LangSmith SDK is exercised against a recording HTTP session: explicit client/project routing, request/child trace relationships, vector-index events, input/output masking (including vision payloads), visible retries, concurrent-request isolation, nonfatal tracing authentication failures, and parser-worker credential exclusion. A regression guard rejects accidental use of a default tracing client. These tests do not validate a real LangSmith account or dashboard.
 - Additional checks cover question order/deduplication, partial-answer text, unknown/fabricated citations, PDF versus JSON isolation, visual failure handling, byte/field limits, parser/vision deadlines, disconnect cleanup, CPU cancellation accounting, and content-free JSON logs.
 - Public BGE ONNX artifacts were downloaded at revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`. Actual local inference produces 384-dimensional vectors.
@@ -73,10 +73,43 @@ BM25 score is used as proof of answerability; the answer model must still choose
 `not_found` or `partial` based on evidence. Live answer/citation quality has not
 been evaluated for this retrieval change.
 
+## Server-owned citation checks (2026-09-25)
+
+- `app/evidence.py` slices only the supplied retrieved text into passages of at
+  most 600 characters, preserving exact text. It prefers sentence/word boundaries
+  and bounds tiny-sentence splitting; it never exposes unretrieved source text
+  or turns context labels into citable passages.
+- Each answer call gets its own allowed-ID enum in a strict Pydantic schema.
+  SDK-level tests verify one- and multiple-choice enums, forbidden old quotation
+  fields, unknown-ID rejection, and isolation between concurrent questions.
+  The model/client is reused and the schema is not mutated across requests.
+- Mocked SDK round trips cover the hosting, TLS, and sanctions failure patterns.
+  Answers may paraphrase, but citations copy server text exactly; page/path and
+  text/image provenance remain server-owned. Duplicate IDs collapse to one
+  citation. There is no added repair call or fuzzy quote matching.
+- Defensive tests reject unavailable IDs and corrupted server passages. Existing
+  endpoint tests still cover partial answers, `not_found`, error isolation,
+  request isolation, refusals, deadlines, retries, and unchanged public fields.
+- Local parser/embedding/retrieval runs for all seven demo questions produced
+  10–11 passages per JSON question and 30–33 per PDF question. All passages were
+  exact substrings of their retrieved chunks and at most 600 characters. Hosting
+  and TLS supporting text remains selectable on PDF page 16; JSON hosting, TLS,
+  and sanctions evidence remains selectable at `/0`, `/5`, and `/11`. PDF checks
+  used native text only, without live vision or answer calls. Passage IDs depend
+  on the current retrieval context and must not be hardcoded into clients.
+- Content-free `citations_resolved` and defensive `citation_validation` events
+  are available in application logs and active LangSmith request traces. The
+  model trace returns `evidence_ids`; final quotes appear on the request root.
+
+These checks establish citation construction and source membership, not semantic
+entailment. A valid passage ID can still be irrelevant to a generated claim.
+Restart the app and rerun the live demo to review answer quality with the new
+contract; old traces retain the former free-text citation output.
+
 ## Not yet verified
 
 - **Live LangSmith delivery:** the user supplied model input/output trace information from their live setup. Automated verification remains mocked; account authentication, workspace/region configuration, and the complete dashboard trace tree have not been independently verified. See [setup and privacy instructions](langsmith.md).
-- **Live OpenAI generation/vision:** no paid API calls were made by the coding agent. The user's reported citation failure is covered above; revised-prompt behavior, diagram-reading accuracy, answer entailment, prompt-injection resistance, provider latency/rate limits, and total usage still need live review. A passing mocked test does not establish these properties.
+- **Live OpenAI generation/vision:** no paid API calls were made by the coding agent. The user's reported citation failures are covered above; live passage selection, diagram-reading accuracy, answer entailment, prompt-injection resistance, provider latency/rate limits, and total usage still need live review. A passing mocked test does not establish these properties.
 - **Docker build and Linux runtime:** Docker CLI is present, but the local Docker daemon is not running. The Dockerfile and version lock are supplied; image build, Linux dependency compatibility, worker memory limits, non-root rendering and container health still need a real container smoke test.
 - **Browser visual/interaction QA:** the Browser tool reported no connected browser. HTTP/static-route and JavaScript syntax checks pass; real file-selection, card rendering, responsive layout and download interactions still need browser review.
 

@@ -29,7 +29,7 @@ def test_json_flow_partial_missing_duplicate_and_isolation(client, service):
     assert [r["question"] for r in results] == questions
     assert [r["status"] for r in results] == ["answered", "not_found", "partial", "answered"]
     assert results[0]["citations"] == [
-        {"source_type": "text", "source_path": "/0", "excerpt": "GCP"}
+        {"source_type": "text", "source_path": "/0", "excerpt": json.dumps(document[0])}
     ]
     assert results[1]["answer"] == "Not found in document"
     assert results[1]["citations"] == []

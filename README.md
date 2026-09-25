@@ -82,7 +82,7 @@ Statuses:
 
 PDF citations use physical, one-based `page` numbers; JSON citations use RFC 6901 `source_path` pointers (`""` means the root). Text excerpts match whitespace-normalized extracted text or serialized JSON. An `image` citation quotes a **model-extracted observation**, not a verified verbatim PDF quotation. The UI labels this distinction.
 
-The server resolves source locations and checks excerpt membership. These checks verify provenance, not whether every answer claim logically follows from its citations.
+The server creates exact citation passages (up to 600 characters) from the retrieved text. The model returns only `evidence_ids`, constrained to the passages provided for that question. Python copies each selected passage's text and source location into the public `citations` array; the model does not write quotes or page numbers. Excerpts can include surrounding sentences or serialized JSON fields. These checks verify provenance, not whether every answer claim logically follows from its citations.
 
 Failures use `{"request_id":"...","error":{"code":"...","message":"..."}}`. Invalid syntax/multipart → 400; upload deadline → 408; size/work limits → 413; unsupported format → 415; invalid content/schema → 422; invalid model output → 502; unavailable/configuration/busy → 503; processing timeout → 504. Unexpected/too many multipart parts are rejected by the parser with 400; missing/duplicate expected fields produce 422.
 
@@ -94,7 +94,8 @@ After ingestion, mixed success/failure returns 200 with per-question statuses. A
 2. Parse JSON records or extract PDF text in a disposable subprocess. For PDFs, select substantial raster images and captioned vector diagrams, then render one bounded crop per candidate page.
 3. Analyze selected images once with `gpt-4o-mini`. Reuse identical image/context pairs within the request. Add source-labeled observations alongside native text.
 4. Split source units with LangChain; embed with FastEmbed/BGE; build request-local FAISS and BM25 indexes. Select up to 6 diverse dense hits from 12 FAISS candidates with MMR, then combine them with up to 12 keyword hits using reciprocal rank fusion (RRF). Assemble up to 8 distinct evidence chunks within the context budget.
-5. Generate structured answers through LangChain `ChatOpenAI`, validate citations, and restore input order.
+5. Split the selected evidence into exact citation passages, keeping passages grouped with their original chunk and context.
+6. Generate an answer and passage IDs through LangChain `ChatOpenAI` with a question-specific enum. Resolve citations from the server's passage map and restore input order.
 
 The PDF and JSON branches never share evidence. Source URLs are not followed. Source questions, confidence labels, and `Data-Not-Found` are not themselves factual answers. Prompts treat uploaded content and user questions as untrusted data; no model tools are enabled.
 
@@ -105,6 +106,7 @@ Files are deliberately small and concrete:
 | `app/main.py` | HTTP validation, request limits, lifecycle, UI |
 | `app/ingestion.py` | JSON/PDF parsing, rendering, worker cleanup |
 | `app/retrieval.py` | Local model, splitting, FAISS + BM25, RRF and evidence selection |
+| `app/evidence.py` | Short, exact source passages and their citation IDs |
 | `app/provider.py` | Two structured `gpt-4o-mini` calls: vision and answers |
 | `app/service.py` | Orchestration, citations, partial failures |
 | `app/models.py`, `config.py`, `logging.py` | Schemas, settings, JSON logs |

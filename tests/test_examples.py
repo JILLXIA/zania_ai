@@ -7,7 +7,7 @@ import pytest
 from pypdf import PdfReader
 
 from app.ingestion import json_sources, parse_document, questions_from_bytes
-from app.models import AnswerOutput, AppError, Evidence, VisionOutput
+from app.models import AnswerOutput, AppError, VisionOutput
 from app.retrieval import retrieve_all
 from scripts.create_example_cases import generate
 from tests.conftest import FakeEmbeddings
@@ -142,10 +142,13 @@ def test_scanned_example_through_api(client, service, generated, monkeypatch):
         ],
     )
 
-    async def answer(question, chunks):
+    async def answer(question, passages):
         if "SLA" in question:
             return AnswerOutput(
-                status="not_found", answer="Not found in document", missing_details=[], evidence=[]
+                status="not_found",
+                answer="Not found in document",
+                missing_details=[],
+                evidence_ids=[],
             )
         phrase = (
             "45 days"
@@ -154,12 +157,12 @@ def test_scanned_example_through_api(client, service, generated, monkeypatch):
             if "MFA" in question
             else "Amazon Web Services (AWS). Hosting region: Ireland"
         )
-        chunk = next(c for c in chunks if phrase in c.text)
+        passage = next(p for p in passages if phrase in p.text)
         return AnswerOutput(
             status="answered",
             answer=phrase,
             missing_details=[],
-            evidence=[Evidence(chunk_id=chunk.id, excerpt=phrase)],
+            evidence_ids=[passage.id],
         )
 
     monkeypatch.setattr(service.provider, "answer", answer)
@@ -188,15 +191,15 @@ def test_example_generator_never_overwrites(generated):
 
 
 def test_same_question_with_different_documents(client, service, monkeypatch):
-    async def answer(question, chunks):
-        chunk = chunks[0]
-        is_azure = "Azure" in chunk.text
+    async def answer(question, passages):
+        passage = passages[0]
+        is_azure = "Azure" in passage.text
         phrase = "Microsoft Azure" if is_azure else "AWS in Frankfurt"
         return AnswerOutput(
             status="partial" if is_azure else "answered",
             answer=phrase,
             missing_details=["the geographic region"] if is_azure else [],
-            evidence=[Evidence(chunk_id=chunk.id, excerpt=phrase)],
+            evidence_ids=[passage.id],
         )
 
     monkeypatch.setattr(service.provider, "answer", answer)
@@ -221,17 +224,17 @@ def test_same_question_with_different_documents(client, service, monkeypatch):
     [
         ("unavailable", 503, "provider_unavailable"),
         ("timeout", 504, "provider_timeout"),
-        ("bad_quote", 502, "invalid_citation"),
+        ("bad_evidence_id", 502, "invalid_citation"),
     ],
 )
 def test_operational_failure_examples(client, service, monkeypatch, failure, status, code):
-    async def broken_answer(question, chunks):
-        if failure == "bad_quote":
+    async def broken_answer(question, passages):
+        if failure == "bad_evidence_id":
             return AnswerOutput(
                 status="answered",
                 answer="Invented AWS answer",
                 missing_details=[],
-                evidence=[Evidence(chunk_id=chunks[0].id, excerpt="FABRICATED")],
+                evidence_ids=["not-supplied:p0"],
             )
         raise AppError(status, code, "Simulated provider failure; no remote call was made.")
 

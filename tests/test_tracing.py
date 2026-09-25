@@ -14,7 +14,7 @@ from app.provider import OpenAIProvider
 from app.service import QAService
 from app.tracing import create_trace_client
 from tests.conftest import FakeEmbeddings
-from tests.test_provider import completion, missing_response
+from tests.test_provider import ANSWER_PASSAGES, completion, missing_response
 
 
 class RecordingSession(requests.Session):
@@ -128,7 +128,7 @@ async def test_request_tree_and_content_controls(settings, tracing_session, tmp_
             "status": "answered",
             "answer": "Hosted on GCP.",
             "missing_details": [],
-            "evidence": [{"chunk_id": "c0", "excerpt": "Hosted on GCP."}],
+            "evidence_ids": ["c0:p0"],
         }
     )
     provider = OpenAIProvider(
@@ -167,6 +167,7 @@ async def test_request_tree_and_content_controls(settings, tracing_session, tmp_
     assert hybrid["kwargs"]["dense_candidates"] == 1
     assert hybrid["kwargs"]["selected_chunks"] == 1
     assert any(e["name"] == "answer" for e in root["events"])
+    assert any(e["name"] == "citations_resolved" for e in root["events"])
     body = json.dumps(tracing_session.payloads)
     assert ("private-source-sentinel" in body) is not hide_content
     assert ("private-question-sentinel" in body) is not hide_content
@@ -251,7 +252,7 @@ async def test_retry_attempts_are_visible(settings, tracing_session, monkeypatch
     monkeypatch.setattr("app.provider.asyncio.sleep", no_delay)
     provider = OpenAIProvider(settings, httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     try:
-        assert (await provider.answer("Question", [])).status == "not_found"
+        assert (await provider.answer("Question", ANSWER_PASSAGES)).status == "not_found"
     finally:
         await provider.close()
     assert {r.get("name") for r in tracing_session.runs()} >= {

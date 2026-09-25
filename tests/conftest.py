@@ -12,7 +12,7 @@ from reportlab.pdfgen import canvas
 
 from app.config import Settings
 from app.main import create_app
-from app.models import AnswerOutput, AppError, Evidence, VisionOutput
+from app.models import AnswerOutput, AppError, VisionOutput
 from app.service import QAService
 
 
@@ -49,8 +49,8 @@ class FakeProvider:
             kind="content", observations=["The diagram shows Redis inside GCP."]
         )
 
-    async def answer(self, question, chunks):
-        self.answers.append((question, chunks))
+    async def answer(self, question, passages):
+        self.answers.append((question, passages))
         if "failure" in question:
             raise AppError(503, "provider_unavailable", "The model provider is unavailable.")
         phrase = (
@@ -60,16 +60,16 @@ class FakeProvider:
             if "diagram" in question
             else "GCP"
         )
-        chunk = next((c for c in chunks if phrase in c.text), None)
-        if chunk is None or "unsupported" in question:
+        passage = next((p for p in passages if phrase in p.text), None)
+        if passage is None or "unsupported" in question:
             return AnswerOutput(
-                status="not_found", answer="ignored", evidence=[], missing_details=[]
+                status="not_found", answer="ignored", evidence_ids=[], missing_details=[]
             )
         return AnswerOutput(
             status="partial" if "SLA" in question else "answered",
             answer=f"The document states: {phrase}.",
             missing_details=["a numeric notification SLA"] if "SLA" in question else [],
-            evidence=[Evidence(chunk_id=chunk.id, excerpt=phrase)],
+            evidence_ids=[passage.id],
         )
 
     async def analyze_image(self, visual, budget):

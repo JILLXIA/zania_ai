@@ -63,18 +63,12 @@ class QAResponse(BaseModel):
 
 
 # Provider schemas have no optional/default fields: strict structured output requires every key.
-class Evidence(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    chunk_id: str
-    excerpt: str
-
-
 class AnswerOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["answered", "partial", "not_found"]
     answer: str
     missing_details: list[str]
-    evidence: list[Evidence]
+    evidence_ids: list[str]
 
 
 class VisionOutput(BaseModel):

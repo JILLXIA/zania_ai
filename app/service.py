@@ -5,6 +5,7 @@ from pathlib import Path
 from langsmith import tracing_context
 
 from app.config import Settings
+from app.evidence import Passage, build_passages
 from app.ingestion import parse_document, vision_tokens
 from app.logging import event
 from app.logging import request_id as log_request_id
@@ -22,29 +23,34 @@ from app.retrieval import retrieve_all
 from app.tracing import trace_step
 
 
-def grounded_result(question, output: AnswerOutput, chunks) -> Result:
+def grounded_result(question, output: AnswerOutput, passages: list[Passage]) -> Result:
     if output.status == "not_found":
-        if output.evidence or output.missing_details:
+        if output.evidence_ids or output.missing_details:
             raise AppError(502, "invalid_answer", "Inconsistent missing-evidence response.")
         return Result(question=question, answer="Not found in document", status="not_found")
-    if not output.answer.strip() or not output.evidence:
+    if not output.answer.strip() or not output.evidence_ids:
         raise AppError(502, "invalid_answer", "A factual answer must include evidence.")
     if (output.status == "partial") != bool(output.missing_details):
         raise AppError(502, "invalid_answer", "Partial-answer details are inconsistent.")
-    lookup, citations = {c.id: c for c in chunks}, []
-    for evidence in output.evidence:
-        chunk = lookup.get(evidence.chunk_id)
-        quote = normalize(evidence.excerpt)
-        if chunk is None or not quote or quote not in normalize(chunk.text):
-            raise AppError(502, "invalid_citation", "The answer contains an unverified citation.")
+    lookup, citations = {p.id: p for p in passages}, []
+    for evidence_id in dict.fromkeys(output.evidence_ids):
+        passage = lookup.get(evidence_id)
+        if passage is None:
+            event("citation_validation", code="unknown_evidence_id")
+            raise AppError(502, "invalid_citation", "The answer references unavailable evidence.")
+        if not passage.text.strip() or passage.text not in passage.chunk.text:
+            event("citation_validation", code="invalid_source_passage")
+            raise AppError(502, "invalid_citation", "The citation passage could not be verified.")
+        source = passage.chunk.source
         citation = Citation(
-            source_type=chunk.source.source_type,
-            page=chunk.source.page,
-            source_path=chunk.source.source_path,
-            excerpt=quote,
+            source_type=source.source_type,
+            page=source.page,
+            source_path=source.source_path,
+            excerpt=passage.text,
         )
         if citation not in citations:
             citations.append(citation)
+    event("citations_resolved", count=len(citations))
     answer = output.answer.strip()
     if output.missing_details:
         missing = "; ".join(s.strip() for s in output.missing_details if s.strip())
@@ -222,14 +228,15 @@ class QAService:
 
         async def answer(question, context):
             try:
-                if not context:
+                passages = build_passages(context)
+                if not passages:
                     result = Result(
                         question=question, answer="Not found in document", status="not_found"
                     )
                 else:
                     async with semaphore:
-                        output = await self.provider.answer(question, context)
-                    result = grounded_result(question, output, context)
+                        output = await self.provider.answer(question, passages)
+                    result = grounded_result(question, output, passages)
                 results[question] = result
             except AppError as exc:
                 results[question] = failed_result(question, exc)
