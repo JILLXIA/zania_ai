@@ -1,0 +1,6 @@
+[
+  "Which cloud provider hosts production, and in which region?",
+  "How is customer data protected at rest and in transit?",
+  "How often are backups taken, and how long are they kept?",
+  "Who reviews restoration tests, and how often?"
+]

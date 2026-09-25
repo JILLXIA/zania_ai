@@ -1,0 +1,23 @@
+[
+  {
+    "id": "hosting",
+    "question": "Which cloud provider hosts the application?",
+    "answer": "The application is hosted on Google Cloud Platform (GCP).",
+    "comments": "",
+    "confidence": "high"
+  },
+  {
+    "id": "incidents",
+    "question": "How are customers notified about security incidents?",
+    "answer": "Affected customers are notified by email without undue delay.",
+    "comments": "The Security Officer coordinates the notifications.",
+    "confidence": "high"
+  },
+  {
+    "id": "offboarding",
+    "question": "When is access removed for departing employees?",
+    "answer": "Access is removed within 24 hours of termination.",
+    "comments": "This deadline concerns employee offboarding only.",
+    "confidence": "high"
+  }
+]

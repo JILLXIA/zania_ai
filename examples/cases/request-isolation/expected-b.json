@@ -1,0 +1,12 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "partial",
+      "evidence_paths": [
+        "/0"
+      ],
+      "review": "Microsoft Azure; explicitly state that the region was not found. Never reuse Frankfurt from the previous request with document A."
+    }
+  ]
+}

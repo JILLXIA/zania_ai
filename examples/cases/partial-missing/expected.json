@@ -1,0 +1,31 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "partial",
+      "evidence_paths": [
+        "/0"
+      ],
+      "review": "Answer GCP; explicitly say the region is not found within the same answer string."
+    },
+    {
+      "status": "partial",
+      "evidence_paths": [
+        "/1"
+      ],
+      "review": "Email, without undue delay; numeric notification SLA is missing. Never borrow the 24-hour offboarding deadline."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/2"
+      ],
+      "review": "Within 24 hours of termination."
+    },
+    {
+      "status": "not_found",
+      "evidence_paths": [],
+      "review": "Exactly Not found in document; no citations. Missing certification evidence is not proof that the company lacks certification."
+    }
+  ]
+}

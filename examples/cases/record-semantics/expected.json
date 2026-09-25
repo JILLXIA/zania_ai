@@ -1,0 +1,29 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/0"
+      ],
+      "review": "Yes; interpret the short answer with its source question. Do not claim MFA is required for every customer user."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/1"
+      ],
+      "review": "No selling of personal information. A documented No is not not_found; do not generalize this to all third-party disclosure."
+    },
+    {
+      "status": "not_found",
+      "evidence_paths": [],
+      "review": "Data-Not-Found is missing evidence, even with high confidence."
+    },
+    {
+      "status": "not_found",
+      "evidence_paths": [],
+      "review": "A source question and confidence label alone provide no audit date."
+    }
+  ]
+}

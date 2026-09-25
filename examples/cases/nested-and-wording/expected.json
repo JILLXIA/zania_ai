@@ -1,0 +1,38 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "evidence_paths": [
+        ""
+      ],
+      "review": "Microsoft Azure. This small nested object is kept as one root source; the correct JSON Pointer is the empty string."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        ""
+      ],
+      "review": "Same hosting fact despite different wording. This tests semantic retrieval, not an implemented query-rewrite feature."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        ""
+      ],
+      "review": "Same result as question 1; original whitespace/order preserved. Only trim-identical questions are deduplicated."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        ""
+      ],
+      "review": "Backups retained 14 days; access reviewed every 90 days. Keep the two scopes distinct."
+    },
+    {
+      "status": null,
+      "evidence_paths": [],
+      "review": "Exploratory ambiguity case, not a deterministic pass/fail assertion. No clarification or query rewriting is implemented. Review whether the answer acknowledges missing scope instead of silently picking one of the different timings; any claimed fact must still be cited."
+    }
+  ]
+}

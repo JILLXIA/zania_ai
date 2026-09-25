@@ -1,0 +1,16 @@
+[
+  {
+    "id": "questionnaire-a",
+    "question": "Which cloud provider hosts production?",
+    "answer": "Production is hosted on Amazon Web Services (AWS).",
+    "comments": "Undated questionnaire A; no approval or precedence information.",
+    "confidence": "high"
+  },
+  {
+    "id": "questionnaire-b",
+    "question": "Which cloud provider hosts production?",
+    "answer": "Production is hosted on Microsoft Azure.",
+    "comments": "Undated questionnaire B; no approval or precedence information.",
+    "confidence": "high"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "page": 1,
+      "source_type": "image",
+      "review": "Amazon Web Services (AWS), Ireland. All substantive evidence is rasterized, not native PDF text."
+    },
+    {
+      "status": "answered",
+      "page": 1,
+      "source_type": "image",
+      "review": "45 days."
+    },
+    {
+      "status": "answered",
+      "page": 1,
+      "source_type": "image",
+      "review": "Administrator MFA is required."
+    },
+    {
+      "status": "not_found",
+      "review": "Exactly Not found in document; the scanned page has no incident-notification SLA."
+    }
+  ]
+}

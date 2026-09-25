@@ -12,6 +12,7 @@ __pycache__/
 .models/
 codingRequirements/
 output/
+tmp/pdfs/
 dist/
 build/
 .DS_Store

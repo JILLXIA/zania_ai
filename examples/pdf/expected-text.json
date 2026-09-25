@@ -1,0 +1,27 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "page": 1,
+      "source_type": "text",
+      "review": "Microsoft Azure, West Europe."
+    },
+    {
+      "status": "partial",
+      "page": 2,
+      "source_type": "text",
+      "review": "Email without undue delay; explicitly state that a numeric incident-notification SLA is missing. Do not borrow the 24-hour offboarding rule."
+    },
+    {
+      "status": "answered",
+      "page": 2,
+      "source_type": "text",
+      "review": "Within 24 hours after termination."
+    },
+    {
+      "status": "not_found",
+      "review": "Exactly Not found in document; no citations."
+    }
+  ]
+}

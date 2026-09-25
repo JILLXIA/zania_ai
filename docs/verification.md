@@ -4,7 +4,7 @@ Checked on macOS / Python 3.12.14, 2026-09-24. These notes separate local eviden
 
 ## Completed
 
-- **76 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite.
+- **112 offline tests pass**, with network sockets disabled. No API key or downloaded embedding model is required for that suite. The original suite had 76 tests; the expanded example catalog adds 36 checks.
 - Ruff lint and formatting checks, Python compilation, JavaScript syntax check, and `pip check` pass.
 - Started the actual Uvicorn server on loopback and verified `/health` over HTTP returned `{"status":"ok"}`. No API key was configured for this smoke check.
 - Tests exercise real JSON/PDF parsing, real PDFium image-region rendering, real FAISS indexing/MMR, multipart validation, response schemas, and service orchestration. Deterministic embeddings and fake answers are test doubles, not claims of answer quality.
@@ -13,6 +13,7 @@ Checked on macOS / Python 3.12.14, 2026-09-24. These notes separate local eviden
 - Public BGE ONNX artifacts were downloaded at revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`. Actual local inference produces 384-dimensional vectors.
 - Converted the supplied CSV locally and verified 19 records. The conversion utility preserves all named field values and refuses overwrites. The generated private JSON stays under the ignored requirements directory.
 - Synthetic JSON, independent questions, and a one-page PDF with an embedded diagram are included for fresh-checkout requests.
+- The [expanded example catalog](../examples/README.md) adds paired JSON cases for partial/missing answers, record semantics, contradictions, nested data, wording/ambiguity, prompt injection, and request isolation. A reproducible local generator supplies native-text, scanned, encrypted and blank PDFs plus malformed/limit-boundary fixtures. Offline checks assert parsing, source locations, exact rejection codes and simulated provider failures, not live semantic answer quality.
 
 ## Real sample retrieval (not live generation)
 

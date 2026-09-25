@@ -1,0 +1,9 @@
+[
+  {
+    "id": "hosting",
+    "question": "Where is the service hosted?",
+    "answer": "The service is hosted on AWS in Frankfurt.",
+    "comments": "Fictional tenant A.",
+    "confidence": "high"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "organization": "Harbor Analytics (fictional)",
+  "infrastructure": {
+    "hosting": {
+      "provider": "Microsoft Azure",
+      "primary_region": "West Europe"
+    },
+    "storage/backup~policy": {
+      "schedule": "Daily",
+      "retention": "14 days"
+    }
+  },
+  "security": {
+    "access": {
+      "review_frequency": "Every 90 days"
+    },
+    "incident_notification": {
+      "deadline": "Within 48 hours of confirming a customer-impacting incident"
+    }
+  }
+}

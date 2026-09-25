@@ -1,0 +1,18 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/0",
+        "/1"
+      ],
+      "review": "Explicitly report the AWS/Azure conflict and cite both claims. Do not invent a migration, multi-cloud architecture, or authoritative winner."
+    },
+    {
+      "status": "not_found",
+      "evidence_paths": [],
+      "review": "Neither record supplies an approval date. Array order is not chronology."
+    }
+  ]
+}

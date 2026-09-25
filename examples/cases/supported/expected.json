@@ -1,0 +1,33 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/0"
+      ],
+      "review": "Identify AWS and Frankfurt; do not substitute GCP from another example."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/1"
+      ],
+      "review": "Distinguish AES-256 at rest from TLS 1.3 in transit."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/2"
+      ],
+      "review": "Every 24 hours; retained for 30 days."
+    },
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/2"
+      ],
+      "review": "Security Officer; quarterly. Comments are valid evidence."
+    }
+  ]
+}

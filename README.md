@@ -40,6 +40,8 @@ The preparation step downloads a public, revision-pinned ~63 MiB ONNX model plus
 
 The repository includes independently authored questions and synthetic JSON/PDF documents. These are not reproductions of the private challenge samples.
 
+For a broader set of paired examples and failure scenarios, see the [example catalog](examples/README.md). It includes expected review outcomes, invalid uploads, scanned/encrypted/blank PDFs, and offline operational-failure checks.
+
 ```sh
 # JSON document request
 curl --fail-with-body http://127.0.0.1:8000/qa \

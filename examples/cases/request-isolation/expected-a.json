@@ -1,0 +1,12 @@
+{
+  "http_status": 200,
+  "results": [
+    {
+      "status": "answered",
+      "evidence_paths": [
+        "/0"
+      ],
+      "review": "AWS, Frankfurt. Use only document A."
+    }
+  ]
+}

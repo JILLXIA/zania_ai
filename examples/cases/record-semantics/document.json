@@ -1,0 +1,29 @@
+[
+  {
+    "id": "mfa",
+    "question": "Is MFA required for administrator access?",
+    "answer": "Yes",
+    "comments": "Applies to all production administrators.",
+    "confidence": "high"
+  },
+  {
+    "id": "sale",
+    "question": "Do you sell customer personal information?",
+    "answer": "No",
+    "comments": "This response concerns selling data, not all disclosures to service providers.",
+    "confidence": "high"
+  },
+  {
+    "id": "iso",
+    "question": "What is the ISO 27001 certificate number?",
+    "answer": "Data-Not-Found",
+    "comments": "",
+    "confidence": "high"
+  },
+  {
+    "id": "soc2",
+    "question": "When was the latest SOC 2 audit completed?",
+    "comments": "",
+    "confidence": "high"
+  }
+]

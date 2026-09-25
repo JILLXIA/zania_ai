@@ -1,0 +1,6 @@
+[
+  "Which cloud provider and region appear in the scanned policy?",
+  "What is the backup retention period?",
+  "Does the scanned policy require administrator MFA?",
+  "What is the numeric security-incident notification SLA?"
+]
