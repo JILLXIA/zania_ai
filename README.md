@@ -93,7 +93,7 @@ After ingestion, mixed success/failure returns 200 with per-question statuses. A
 1. Validate uploads and the entire question list before expensive work.
 2. Parse JSON records or extract PDF text in a disposable subprocess. For PDFs, select substantial raster images and captioned vector diagrams, then render one bounded crop per candidate page.
 3. Analyze selected images once with `gpt-4o-mini`. Reuse identical image/context pairs within the request. Add source-labeled observations alongside native text.
-4. Split source units with LangChain; embed with FastEmbed/BGE; build one request-local FAISS index. Retrieve diverse evidence for each unique question.
+4. Split source units with LangChain; embed with FastEmbed/BGE; build request-local FAISS and BM25 indexes. Select up to 6 diverse dense hits from 12 FAISS candidates with MMR, then combine them with up to 12 keyword hits using reciprocal rank fusion (RRF). Assemble up to 8 distinct evidence chunks within the context budget.
 5. Generate structured answers through LangChain `ChatOpenAI`, validate citations, and restore input order.
 
 The PDF and JSON branches never share evidence. Source URLs are not followed. Source questions, confidence labels, and `Data-Not-Found` are not themselves factual answers. Prompts treat uploaded content and user questions as untrusted data; no model tools are enabled.
@@ -104,7 +104,7 @@ Files are deliberately small and concrete:
 | --- | --- |
 | `app/main.py` | HTTP validation, request limits, lifecycle, UI |
 | `app/ingestion.py` | JSON/PDF parsing, rendering, worker cleanup |
-| `app/retrieval.py` | Local model, splitting, FAISS and evidence selection |
+| `app/retrieval.py` | Local model, splitting, FAISS + BM25, RRF and evidence selection |
 | `app/provider.py` | Two structured `gpt-4o-mini` calls: vision and answers |
 | `app/service.py` | Orchestration, citations, partial failures |
 | `app/models.py`, `config.py`, `logging.py` | Schemas, settings, JSON logs |
@@ -124,7 +124,7 @@ Configure settings with `ZANIA_` environment variables; `.env.example` lists com
 | Visual input budget | 350,000 estimated tokens, including retries |
 | Text / JSON depth / chunks | 1,000,000 characters / 32 / 2,000 |
 | Chunk target / overlap | 250 / 40 local-model tokens, also byte-bounded |
-| Retrieved context | Up to 6 hits; expand to the same page/record when ≤5,000 bytes; 12,000 total UTF-8 bytes including labels (roughly 3K English tokens, **not** an exact GPT-token count) |
+| Retrieved context | Up to 8 hits; expand to the same page/record when ≤5,000 bytes and the budget allows; otherwise keep the matching chunk; 16,000 total UTF-8 bytes including labels (roughly 4K English tokens, **not** an exact GPT-token count) |
 | Upload / parse-and-render / vision / processing deadline | 60 / 40 / 120 / 180 seconds |
 | Provider attempt / retry count | 30 seconds / at most one transient retry |
 | Active requests / global model calls | 2 / 6 per process |
@@ -146,7 +146,7 @@ ruff format --check app scripts tests main.py
 node --check app/static/app.js
 ```
 
-Tests disable network sockets and use deterministic embeddings plus mocked provider responses. They still exercise actual multipart handling, JSON parsing, PDF extraction/rendering, FAISS, service orchestration, and OpenAI SDK request/response handling. No key or model download is needed for tests.
+Tests disable network sockets and use deterministic embeddings plus mocked provider responses. They still exercise actual multipart handling, JSON parsing, PDF extraction/rendering, FAISS, BM25/RRF, service orchestration, and OpenAI SDK request/response handling. No key or model download is needed for tests.
 
 Additional opt-in checks:
 

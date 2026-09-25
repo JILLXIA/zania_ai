@@ -17,7 +17,7 @@ from app.service import QAService
 
 
 class FakeEmbeddings:
-    """Deterministic lexical vectors; real chunking, FAISS and MMR still run."""
+    """Deterministic lexical vectors; real chunking, FAISS, BM25 and RRF still run."""
 
     def __init__(self):
         self.document_calls = 0

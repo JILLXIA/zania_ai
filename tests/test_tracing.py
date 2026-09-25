@@ -163,6 +163,9 @@ async def test_request_tree_and_content_controls(settings, tracing_session, tmp_
     retrieval = next(r for r in runs if r.get("name") == "retrieve_evidence")
     event = next(e for e in retrieval["events"] if e["name"] == "vector_index")
     assert event["kwargs"]["vectors"] == 1 and event["time"]
+    hybrid = next(e for e in retrieval["events"] if e["name"] == "hybrid_retrieval")
+    assert hybrid["kwargs"]["dense_candidates"] == 1
+    assert hybrid["kwargs"]["selected_chunks"] == 1
     assert any(e["name"] == "answer" for e in root["events"])
     body = json.dumps(tracing_session.payloads)
     assert ("private-source-sentinel" in body) is not hide_content

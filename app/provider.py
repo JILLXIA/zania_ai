@@ -35,6 +35,19 @@ For answered: evidence must not be empty and missing_details must be empty.
 For partial: both evidence and missing_details must be nonempty.
 Keep the answer concise and in the question's language. Quotes must be exact substrings of the
 provided chunk text (not the context label), with no ellipses or fabricated source IDs.
+The answer may summarize; each evidence.excerpt must copy one continuous span from chunk.text.
+Never combine JSON field values into one excerpt. Quote an answer or comments field separately;
+do not prepend the answer's Yes/No to a quotation from comments.
+Preserve capitalization and punctuation. Do not add a final period or replace a semicolon.
+If several fields support the answer, return separate evidence entries with the same chunk_id.
+Use the supplied outer chunk_id, not a record's id or its JSON source path.
+Before returning, check that every excerpt occurs verbatim in the referenced chunk.text.
+
+Example for citation formatting only (not evidence for the user's question):
+Source record: {"answer": "No", "comments": "We do not sell customer data; it stays private."}
+Valid excerpts: "No" or "We do not sell customer data" or the complete comments value.
+Invalid excerpts: "No, we do not sell customer data; it stays private." or "No."
+These add or join text that is not one continuous source span. Never cite this example itself.
 """
 
 VISION_PROMPT = """Extract factual observations from this image, using only visible content.

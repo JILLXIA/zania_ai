@@ -2,7 +2,7 @@
 
 Status: Implemented after user approval. Setup and current behavior are documented in [README](../README.md); actual checks and remaining limitations are in [verification notes](verification.md).
 
-Implementation adjustments for simplicity and sample-based retrieval quality: use FAISS directly with LangChain splitting/MMR rather than a community vector-store wrapper; use 250-token chunks with 40-token overlap and bounded same-page/record context expansion; cap answer context at 12,000 UTF-8 bytes rather than claiming an exact GPT-token count; use a combined 40-second parsing/rendering worker deadline. No agents, abstract provider hierarchy, database, or background queue were added. The sections below have been updated where these affect behavior; the verification checklist describes intended coverage, not an assertion that every scenario was tested.
+Implementation adjustments for simplicity and sample-based retrieval quality: use FAISS directly with LangChain splitting/MMR rather than a community vector-store wrapper; combine the diverse dense hits with BM25 keyword hits using reciprocal rank fusion (RRF); use 250-token chunks with 40-token overlap and bounded same-page/record context expansion; cap answer context at 8 evidence chunks and 16,000 UTF-8 bytes rather than claiming an exact GPT-token count; use a combined 40-second parsing/rendering worker deadline. No agents, abstract provider hierarchy, database, or background queue were added. The sections below have been updated where these affect behavior; the verification checklist describes intended coverage, not an assertion that every scenario was tested.
 
 The user has clarified the sample roles and partial-answer behavior, requested PDF text extraction plus image analysis using `gpt-4o-mini`, and accepted the remaining proposed defaults, including local embeddings. No technical clarification currently blocks this design. See the [decision record and optional submission questions](interviewer-questions.md). These are user-approved design decisions, not claims of additional instructions from Zania.
 
@@ -38,8 +38,8 @@ flowchart TD
     P --> C[Split into citation-preserving chunks]
     M --> C
     J --> C
-    C --> E[Embed once and build request-local FAISS index]
-    E --> R[Retrieve evidence for each unique question]
+    C --> E[Build request-local FAISS and BM25 indexes]
+    E --> R[Merge dense and keyword rankings with RRF]
     R --> L[Bounded async gpt-4o-mini calls]
     L --> G[Validate structured answers and citations]
     G --> O[Restore question order and return JSON]
@@ -54,6 +54,7 @@ flowchart TD
 | Image understanding | `gpt-4o-mini` with image inputs and structured observations | Read visible labels and diagram relationships using the same permitted OpenAI model |
 | Embeddings | FastEmbed with `BAAI/bge-small-en-v1.5` | Accepted local default; CPU inference and no embedding API charges |
 | Vector search | `faiss-cpu`, in memory per request | No separate database server or persistence setup |
+| Keyword search / fusion | `rank-bm25` BM25Okapi + equal-weight RRF | Complement semantic search with exact terms; no extra model or service |
 | Answer generation | `gpt-4o-mini`, temperature 0, structured output | Required model, predictable response shape |
 | Frontend | Static HTML, CSS, and JavaScript served by FastAPI | One process and no frontend build toolchain |
 | Verification | pytest, HTTPX, deterministic test doubles, Ruff | Offline tests and a small reproducible quality check |
@@ -70,7 +71,7 @@ Keep embeddings behind an adapter, but implement only the selected local model. 
 - API layer: multipart handling, request IDs, response schemas, HTTP error mapping, and dependency wiring.
 - Ingestion layer: PDF/JSON extraction, visual-region selection/rendering, normalization, source locations, and chunking.
 - Visual-analysis adapter: bounded `gpt-4o-mini` image calls that produce reusable observations and source metadata.
-- Retrieval layer: document/query embeddings, FAISS indexing, and evidence selection.
+- Retrieval layer: document/query embeddings, FAISS and BM25 indexing, rank fusion, and evidence selection.
 - Answer service: question deduplication, concurrency, prompting, output validation, and result ordering.
 - Infrastructure: settings, provider client, execution limits, structured logs, and lifecycle cleanup.
 
@@ -232,14 +233,17 @@ Rendering crops improves the readability of small diagram labels, but vision sti
 
 ### Retrieval
 
-- Embed native-text and visual-observation chunks once per upload, in batches, and build one FAISS index reused by all questions in that request. JSON uploads contribute only their own text-record chunks.
+- Embed native-text and visual-observation chunks once per upload, in batches, and build one FAISS index reused by all questions in that request. Build one BM25Okapi index over the same chunk text and bounded context labels. Both indexes stay local to the request. JSON uploads contribute only their own text-record chunks.
 - Use FastEmbed's document and query embedding modes through one concrete local-model class. Normalize vectors consistently for similarity search.
-- Batch embeddings for distinct questions. Retrieve 12 candidates and select up to 6 with maximal marginal relevance, initially using relevance/diversity weight 0.7.
-- Remove exact duplicate evidence and cap the assembled context at 12,000 UTF-8 bytes including bounded labels/metadata allowance (roughly 3K English tokens, not an exact GPT-token count). Keep source IDs attached to every excerpt.
+- Batch embeddings for distinct questions. Retrieve up to 12 dense candidates and select up to 6 using MMR (relevance/diversity weight 0.7). Separately retrieve up to 12 positive-scoring BM25 candidates. Combine the two ranked lists with equal-weight RRF: sum `1 / (60 + rank)`, starting ranks at 1. Preserve the dense branch's order on ties. Do not mix raw cosine and BM25 scores.
+- Before fusion, map hits from the same expandable source (at most 5,000 UTF-8 bytes) to one representative chunk: its best dense hit, or its best lexical hit if there is no dense hit. Count each source only once per ranking. This recognizes agreement when the two retrievers hit different chunks of a page/record that can be returned whole. Large-source chunks remain separate, and native-text/image source objects are never merged merely because their page matches.
+- Tokenize document and query text identically with case folding and word tokens that retain internal dots/hyphens (for example, `CC6.1` and `TLS-1.2`). Do not stem or remove stop words/negation words. Skip lexical indexing when the entire corpus has no tokens. If BM25 has no positive matches, use the dense MMR ranking alone; nonpositive scores can also occur for common terms in small corpora.
+- Select in fused order until up to 8 distinct evidence chunks fit. Expand small sources only when the remaining budget allows; otherwise retain the actual representative chunk instead of dropping the hit. Skip duplicates and chunks that still cannot fit. There is no dense-only rerank after fusion.
+- Cap the assembled context at 16,000 UTF-8 bytes including bounded labels/metadata allowance (roughly 4K English tokens, not an exact GPT-token count). The hybrid update increases the previous 6-chunk/12,000-byte cap to give both branches room. Live prompts may be larger; the change adds no model calls. Keep source IDs attached to every excerpt.
 - Do not adopt an arbitrary similarity threshold as proof of answerability. The answer step must evaluate whether the retrieved evidence actually supports the requested facts.
 - Make no LLM call if there is no evidence context. Never retrieve across documents belonging to different requests.
 
-Use dense retrieval as the initial approach. Evaluate exact compliance terms and multi-part questions before adding lexical retrieval or reranking. Retrieval settings are tunable defaults; changes should be backed by the sample evaluation.
+This is a small hybrid retriever, not a new retrieval service or an additional LLM call. [Rank-BM25](https://github.com/dorianbrown/rank_bm25) provides the lexical scorer; fusion follows the [original RRF paper](https://cormack.uwaterloo.ca/cormack/cormacksigir09-rrf.pdf). Neither lexical matches nor fused scores establish that a question is answerable. Exact-term regression coverage and local sample checks are recorded in [verification](verification.md); they do not establish a general answer-accuracy improvement.
 
 ### Generation and citation checks
 
